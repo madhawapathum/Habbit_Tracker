@@ -81,9 +81,42 @@ function formatDateKey(year, month, day) {
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
+// 2026 Sri Lanka Holidays
+const holidays2026 = {
+    '1-3': { name: 'Duruthu Full Moon Poya', emoji: '🌕' },
+    '1-15': { name: 'Tamil Thai Pongal', emoji: '🌾' },
+    '2-1': { name: 'Navam Full Moon Poya', emoji: '🌕' },
+    '2-4': { name: 'Independence Day', emoji: '🇱🇰' },
+    '2-15': { name: 'Mahasivarathri', emoji: '🕉️' },
+    '3-2': { name: 'Madin Full Moon Poya', emoji: '🌕' },
+    '3-21': { name: 'Id-Ul-Fitr', emoji: '☪️' },
+    '4-1': { name: 'Bak Full Moon Poya', emoji: '🌕' },
+    '4-3': { name: 'Good Friday', emoji: '✝️' },
+    '4-13': { name: 'New Year Eve', emoji: '🎆' },
+    '4-14': { name: 'Sinhala & Tamil New Year', emoji: '🎆' },
+    '5-1': { name: 'May Day / Vesak', emoji: '☸️' },
+    '5-2': { name: 'Day following Vesak', emoji: '☸️' },
+    '5-28': { name: 'Id-Ul-Alha', emoji: '🕌' },
+    '5-30': { name: 'Adhi Vesak Poya', emoji: '🌕' },
+    '6-29': { name: 'Poson Full Moon Poya', emoji: '🌕' },
+    '7-29': { name: 'Esala Full Moon Poya', emoji: '🌕' },
+    '8-26': { name: 'Milad-Un-Nabi', emoji: '🕌' },
+    '8-27': { name: 'Nikini Full Moon Poya', emoji: '🌕' },
+    '9-26': { name: 'Binara Full Moon Poya', emoji: '🌕' },
+    '10-25': { name: 'Vap Full Moon Poya', emoji: '🌕' },
+    '11-8': { name: 'Deepavali', emoji: '🪔' },
+    '11-24': { name: 'Ill Full Moon Poya', emoji: '🌕' },
+    '12-23': { name: 'Unduvap Full Moon Poya', emoji: '🌕' },
+    '12-25': { name: 'Christmas Day', emoji: '🎄' }
+};
+
 function renderCalendar() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
+
+    // Only apply for 2026 or generic? Assuming 2026 specific for now based on request
+    const is2026 = year === 2026;
+
     monthYearEl.textContent = `${getMonthName(currentDate)} ${year}`;
 
     const existingDays = calendarEl.querySelectorAll('.day');
@@ -109,6 +142,19 @@ function renderCalendar() {
         numberEl.textContent = day;
         dayEl.appendChild(numberEl);
 
+        // Holiday Check
+        if (is2026) {
+            const holKey = `${month + 1}-${day}`;
+            if (holidays2026[holKey]) {
+                const hol = holidays2026[holKey];
+                const holEl = document.createElement('div');
+                holEl.classList.add('holiday-emoji');
+                holEl.textContent = hol.emoji;
+                holEl.title = hol.name; // Tooltip
+                dayEl.appendChild(holEl);
+            }
+        }
+
         const dateKey = formatDateKey(year, month, day);
         const data = habitData[dateKey];
 
@@ -133,6 +179,15 @@ function renderCalendar() {
             } else if (completed > 0) {
                 // Determine if we should show full for Migrated data w/o tasks?
                 // Logic handled in migrateData()
+            }
+
+            // Reward Emoji
+            if (total > 0 && completed === total) {
+                const reward = document.createElement('div');
+                reward.classList.add('reward-emoji');
+                reward.textContent = '🏆';
+                dayEl.appendChild(reward);
+                dayEl.classList.add('has-reward'); // Add class for styling
             }
 
             // Set CSS Variables for styling
@@ -275,11 +330,31 @@ function toggleTask(id) {
     const data = getDayData(selectedDateStr);
     const task = data.tasks.find(t => t.id === id);
     if (task) {
+        // Check if we are completing it (going from false to true)
+        const wasCompleted = task.completed;
         task.completed = !task.completed;
+
         saveToLocalStorage();
         renderTaskList(data.tasks);
         renderCalendar();
+
+        // Celebration Trigger check
+        // Check if ALL tasks are now completed AND we just completed one
+        if (!wasCompleted && task.completed) {
+            const allCompleted = data.tasks.every(t => t.completed);
+            if (allCompleted) {
+                triggerCelebration();
+            }
+        }
     }
+}
+
+function triggerCelebration() {
+    const overlay = document.getElementById('celebration-overlay');
+    overlay.classList.add('active');
+    setTimeout(() => {
+        overlay.classList.remove('active');
+    }, 2000); // Hide after 2 seconds
 }
 
 function deleteTask(id) {

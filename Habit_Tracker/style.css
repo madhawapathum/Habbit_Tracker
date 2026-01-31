@@ -141,6 +141,127 @@ h1 {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
+
+.reward-emoji {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5rem;
+    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 10;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    pointer-events: none;
+    /* Click through to day */
+}
+
+.holiday-emoji {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    font-size: 0.9rem;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0.9;
+    filter: grayscale(0.2);
+    transition: transform 0.2s;
+}
+
+.day:hover .holiday-emoji {
+    transform: scale(1.2);
+    filter: grayscale(0);
+}
+
+/* Hide other content when reward is present (optional, can be controlled via JS class on parent) */
+.day.has-reward .note-preview {
+    opacity: 0.1;
+}
+
+/* Ensure date is on top */
+.day.has-reward .day-number {
+    z-index: 15;
+    position: relative;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+    /* Add glow for contrast */
+}
+
+.day.has-reward:hover .reward-emoji {
+    animation: wiggle 0.5s ease-in-out infinite;
+}
+
+@keyframes popIn {
+    0% {
+        transform: translate(-50%, -50%) scale(0) rotate(-45deg);
+        opacity: 0;
+    }
+
+    80% {
+        transform: translate(-50%, -50%) scale(1.2) rotate(10deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1) rotate(0);
+    }
+}
+
+@keyframes wiggle {
+
+    0%,
+    100% {
+        transform: translate(-50%, -50%) rotate(-3deg);
+    }
+
+    50% {
+        transform: translate(-50%, -50%) rotate(3deg);
+    }
+}
+
+/* Celebration Overlay */
+#celebration-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 999;
+    display: none;
+    /* Hidden by default */
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+#celebration-overlay.active {
+    display: flex;
+    animation: fadeIn 0.3s;
+}
+
+.cheer-text {
+    font-size: 4rem;
+    font-weight: 800;
+    color: #eab308;
+    text-shadow: 0 0 20px rgba(234, 179, 8, 0.5);
+    animation: cheerPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes cheerPop {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
 /* SIDE PANEL STYLES */
 .modal {
     position: fixed;
