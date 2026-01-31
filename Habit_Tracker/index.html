@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habit Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <button id="prevBtn" class="nav-btn">&lt;</button>
+            <h1 id="monthYear">January 2026</h1>
+            <button id="nextBtn" class="nav-btn">&gt;</button>
+        </header>
+
+        <div class="calendar-grid" id="calendar">
+            <!-- Weekdays Header -->
+            <div class="weekday">Sun</div>
+            <div class="weekday">Mon</div>
+            <div class="weekday">Tue</div>
+            <div class="weekday">Wed</div>
+            <div class="weekday">Thu</div>
+            <div class="weekday">Fri</div>
+            <div class="weekday">Sat</div>
+
+            <!-- Days will be injected here by JS -->
+        </div>
+    </div>
+
+    <!-- Note & Task Modal -->
+    <div class="modal" id="noteModal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Details for Jan 1</h2>
+
+            <div class="section-label">Color Theme</div>
+            <div class="color-picker">
+                <div class="color-option selected" data-color="green" style="--c: #4ade80"></div>
+                <div class="color-option" data-color="red" style="--c: #ef4444"></div>
+                <div class="color-option" data-color="blue" style="--c: #3b82f6"></div>
+                <div class="color-option" data-color="yellow" style="--c: #eab308"></div>
+                <div class="color-option" data-color="purple" style="--c: #a855f7"></div>
+            </div>
+
+            <div class="section-label">Daily Note</div>
+            <textarea id="noteInput" placeholder="How did you do today?"></textarea>
+
+            <div class="section-label">Tasks / Habits</div>
+            <div class="task-input-group">
+                <input type="text" id="newTaskInput" placeholder="Add a new task...">
+                <button id="addTaskBtn">+</button>
+            </div>
+            <div id="taskList" class="task-list">
+                <!-- Tasks injected here -->
+            </div>
+
+            <div class="modal-actions">
+                <button class="cancel" id="cancelBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
