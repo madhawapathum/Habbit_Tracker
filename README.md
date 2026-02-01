@@ -1,51 +1,36 @@
-# Habit Tracker
-
-> [!CAUTION]
-> **Work In Progress**
-> This project is currently under active development. Features, UI, and data structures are subject to change.
-
-A lightweight, browser-based habit tracker designed to help you organize daily tasks and visualize your consistency over time using a monthly calendar view.
-
-## Features
-
-- **Interactive Calendar**:
-  - View tasks and progress month-by-month.
-  - Navigate between months easily.
-  - Visual indicators for task completion progress and daily notes.
-
-- **Daily Management**:
-  - **Tasks**: Add, delete, and check off daily habits/tasks.
-  - **Notes**: Write a daily reflection or log.
-  - **Color Themes**: Tag days with specific colors (Green, Red, Blue, Yellow, Purple) to categorize days or track mood.
-
-- **Data Persistence**:
-  - Uses `localStorage` to save your data directly in your browser. No account or backend required.
-  - Includes data migration logic for backward compatibility.
-
-## Tech Stack
-
-- **HTML5**
-- **CSS3** (Variables, Flexbox, Grid)
-- **JavaScript** (Vanilla ES6+)
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
 
-1. Clone or download the repository.
-2. Navigate to the `Habit_Tracker` folder.
-3. Open `index.html` in any modern web browser.
+First, run the development server:
 
-## Project Structure
-
-```text
-Habbit_Tracker/
-├── Habit_Tracker/
-│   ├── index.html      # Main application entry point
-│   ├── style.css       # Styling for calendar and modals
-│   └── script.js       # Core logic and state management
-└── README.md           # Project documentation
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-## Upcoming
-- [ ] Enhanced mobile responsiveness
-- [ ] Data export/import functionality
-- [ ] Detailed analytics and streaks
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
