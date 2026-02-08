@@ -1,9 +1,7 @@
-import Calendar from "@/components/Calendar";
+import PageADayCalendar from "@/components/PageADayCalendar";
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4">
-      <Calendar />
-    </main>
+    <PageADayCalendar />
   );
 }

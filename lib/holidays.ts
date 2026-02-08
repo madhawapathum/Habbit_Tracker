@@ -4,10 +4,12 @@ export interface Holiday {
 }
 
 export const holidays2026: Record<string, Holiday> = {
+    "1-1": { name: "New Year's Day", emoji: "🥳" },
     "1-3": { name: "Duruthu Full Moon Poya", emoji: "🌕" },
     "1-15": { name: "Tamil Thai Pongal", emoji: "🌾" },
     "2-1": { name: "Navam Full Moon Poya", emoji: "🌕" },
     "2-4": { name: "Independence Day", emoji: "🇱🇰" },
+    "2-14": { name: "Valentine's Day", emoji: "❤️" },
     "2-15": { name: "Mahasivarathri", emoji: "🕉️" },
     "3-2": { name: "Madin Full Moon Poya", emoji: "🌕" },
     "3-21": { name: "Id-Ul-Fitr", emoji: "☪️" },
@@ -25,8 +27,10 @@ export const holidays2026: Record<string, Holiday> = {
     "8-27": { name: "Nikini Full Moon Poya", emoji: "🌕" },
     "9-26": { name: "Binara Full Moon Poya", emoji: "🌕" },
     "10-25": { name: "Vap Full Moon Poya", emoji: "🌕" },
+    "10-31": { name: "Halloween", emoji: "🎃" },
     "11-8": { name: "Deepavali", emoji: "🪔" },
     "11-24": { name: "Ill Full Moon Poya", emoji: "🌕" },
     "12-23": { name: "Unduvap Full Moon Poya", emoji: "🌕" },
     "12-25": { name: "Christmas Day", emoji: "🎄" },
+    "12-31": { name: "New Year's Eve", emoji: "🎊" },
 };
