@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/madhawapathum/Habbit_Tracker/compare/v1.2.0...v1.3.0) (2026-02-08)
+
+
+### Features
+
+* creating a new domain and CI ([0336ab3](https://github.com/madhawapathum/Habbit_Tracker/commit/0336ab3475b23f6bed19139ad0069784d713f01c))
+
 ## [1.2.0](https://github.com/madhawapathum/Habbit_Tracker/compare/v1.1.0...v1.2.0) (2026-02-01)
 
 
