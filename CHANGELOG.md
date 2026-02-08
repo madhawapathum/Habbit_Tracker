@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/madhawapathum/Habbit_Tracker/compare/v1.1.0...v1.2.0) (2026-02-01)
+
+
+### Features
+
+* migrate habit tracker to Next.js root ([f704fcf](https://github.com/madhawapathum/Habbit_Tracker/commit/f704fcfe660425b17309e87d684dcda1d8dfb9db))
+
 ## [1.1.0](https://github.com/madhawapathum/Habbit_Tracker/compare/v1.0.0...v1.1.0) (2026-01-31)
 
 
