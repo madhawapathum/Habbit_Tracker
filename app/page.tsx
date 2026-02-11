@@ -1,7 +1,5 @@
-import PageADayCalendar from "@/components/PageADayCalendar";
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-  return (
-    <PageADayCalendar />
-  );
+  redirect('/dashboard');
 }
