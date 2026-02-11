@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/madhawapathum/Habbit_Tracker/compare/v1.3.0...v1.4.0) (2026-02-11)
+
+
+### Features
+
+* removed ui ([c6de29b](https://github.com/madhawapathum/Habbit_Tracker/commit/c6de29bbd3cb737270c72314299f40b5620b45a2))
+
 ## [1.3.0](https://github.com/madhawapathum/Habbit_Tracker/compare/v1.2.0...v1.3.0) (2026-02-08)
 
 
