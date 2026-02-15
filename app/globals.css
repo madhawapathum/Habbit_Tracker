@@ -1,56 +1,50 @@
 @import "tailwindcss";
 
 :root {
-  --bg-color: #f8f8f5;
-  --card-bg: rgba(255, 255, 255, 0.6);
-  --text-primary: #181611;
-  --text-secondary: #8a8060;
-  --primary: #f4c025;
-  --background-light: #f8f8f5;
-  --background-dark: #221e10;
-  --gap: 20px;
-
-  /* Energetic Gradients - Updated for Sunrise theme */
-  --grad-green: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
-  --grad-gold: linear-gradient(135deg, #f4c025 0%, #ebba1a 100%);
-  --grad-purple: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
-  --grad-blue: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-
-  /* Glow Effects */
-  --shadow-green: 0 0 20px rgba(74, 222, 128, 0.3);
-  --shadow-gold: 0 0 25px rgba(244, 192, 37, 0.4);
-
-  --color-green: #4ade80;
-  --color-red: #ef4444;
-  --color-blue: #3b82f6;
-  --color-yellow: #f4c025;
-  --color-purple: #a855f7;
+  --bg-color: #0f3460;
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --primary: #3b82f6;
+  --background-light: #0f3460;
+  --background-dark: #0f3460;
 }
 
 body {
-  background: var(--background-light);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   color: var(--text-primary);
   margin: 0;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-inter), "Inter", system-ui, sans-serif;
   overflow-x: hidden;
+}
+
+html,
+body {
+  width: 100%;
+  min-height: 100vh;
+}
+
+body > * {
+  width: 100%;
+  min-height: 100vh;
 }
 
 @theme {
   --color-primary: var(--primary);
   --color-background-light: var(--background-light);
   --color-background-dark: var(--background-dark);
-  --font-display: "Inter", sans-serif;
+  --font-display: var(--font-inter), "Inter", sans-serif;
   --font-serif: "Playfair Display", serif;
 }
 
-.paper-texture {
-  background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuD1esLtDYSnZUby15bPp5Sk-SStFrvDAjtRvIZb8xZCxXZHm4J8Nfs6BCsCAEslNnZTUHmddD5L18ds2e4Yifou4kdCeaAlMvLOxv5_4Hpc-WvAZIQGDpw7SaqWsqllmXk8LT2tvo01MDeXUH9nho3XwsKj4S4RKEW1I-MP3U3wJzJtHna9NKsma_b6Hf0UqXEyxRSj4FA7E8fyU-fEcpV64lg41229D69Ir1hdi2TGNqh4qdsEztLU2Q1TCv50xnI_0EFYVycM_Ac);
-  opacity: 0.03;
-  pointer-events: none;
+.app-shell {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
 }
 
-.sunrise-gradient {
-  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 30%, #fef3c7 100%);
+.app-header {
+  background: rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .wax-seal-checkbox {

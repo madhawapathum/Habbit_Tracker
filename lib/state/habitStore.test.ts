@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { habitStore } from './habitStore';
 import { Habit } from '../domain/types';
+import { buildDashboardSummary } from '../domain/dashboard';
 
 // Mock localStorage
 const localStorageMock = (function () {
@@ -36,6 +37,7 @@ if (!global.crypto) {
 
 describe('habitStore', () => {
     beforeEach(() => {
+        vi.clearAllMocks();
         localStorage.clear();
     });
 
@@ -184,5 +186,154 @@ describe('habitStore', () => {
     it('should fail gracefully on invalid import', () => {
         const result = habitStore.importData('not-valid-json{{{');
         expect(result).toBe(false);
+    });
+
+    it('seeds realistic dev test data and produces non-trivial dashboard metrics', () => {
+        const referenceDate = new Date('2026-02-15T12:00:00.000Z');
+
+        const seeded = habitStore.seedRealisticTestData(referenceDate);
+        expect(seeded).toBe(true);
+
+        const habits = habitStore.getHabits();
+        const entries = habits.flatMap((habit) => habitStore.getEntries(habit.id));
+
+        expect(habits).toHaveLength(3);
+        expect(entries.length).toBeGreaterThanOrEqual(10);
+        expect(entries.length).toBeLessThanOrEqual(14);
+
+        const summary = buildDashboardSummary(habits, entries, referenceDate);
+
+        expect(summary.consistency).toBeGreaterThan(0);
+        expect(summary.fragility).toBeGreaterThan(0);
+
+        const skipCounts = [0, 0, 0, 0, 0, 0, 0];
+        const start = new Date(referenceDate);
+        start.setDate(start.getDate() - 13);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(referenceDate);
+        end.setHours(0, 0, 0, 0);
+
+        habits.forEach((habit) => {
+            const completionSet = new Set(
+                habitStore.getEntries(habit.id).map((entry) => {
+                    const day = new Date(entry.completedAt);
+                    day.setHours(0, 0, 0, 0);
+                    return day.getTime();
+                })
+            );
+
+            const cursor = new Date(start);
+            while (cursor <= end) {
+                if (habit.targetDays.includes(cursor.getDay()) && !completionSet.has(cursor.getTime())) {
+                    skipCounts[cursor.getDay()]++;
+                }
+                cursor.setDate(cursor.getDate() + 1);
+            }
+        });
+
+        const maxSkips = Math.max(...skipCounts);
+        const expectedDominantSkipDay = maxSkips > 0 ? skipCounts.findIndex((count) => count === maxSkips) : null;
+        expect(summary.dominantSkipDay).toBe(expectedDominantSkipDay);
+
+        expect(summary.weeklyPerformance.completed).toBeGreaterThan(0);
+        expect(summary.weeklyPerformance.opportunities).toBeGreaterThan(0);
+    });
+
+    it('does not overwrite existing live data when seeding unless forced', () => {
+        const existingHabit: Habit = {
+            id: 'existing-habit',
+            title: 'Keep Me',
+            targetDays: [1],
+            createdAt: new Date('2026-02-15T12:00:00.000Z'),
+        };
+        habitStore.updateHabit(existingHabit);
+
+        const seeded = habitStore.seedRealisticTestData(new Date('2026-02-15T12:00:00.000Z'));
+        expect(seeded).toBe(false);
+
+        const habits = habitStore.getHabits();
+        expect(habits.some((habit) => habit.id === 'existing-habit')).toBe(true);
+    });
+
+    it('maps DayTask creation into habits/entries so dashboard completion metrics change', () => {
+        const referenceDate = new Date('2026-02-16T12:00:00.000Z');
+
+        habitStore.updateHabit({
+            id: 'baseline-habit',
+            title: 'Baseline',
+            targetDays: [referenceDate.getDay()],
+            createdAt: new Date(referenceDate),
+            startDate: new Date(referenceDate),
+            endDate: new Date(referenceDate),
+        });
+        habitStore.addEntry('baseline-habit', referenceDate);
+
+        const baselineHabits = habitStore.getHabits();
+        const baselineEntries = baselineHabits.flatMap((habit) => habitStore.getEntries(habit.id));
+        const baselineSummary = buildDashboardSummary(baselineHabits, baselineEntries, referenceDate);
+
+        habitStore.createDayTask(referenceDate, 'Task mapped to habit');
+
+        const afterCreateHabits = habitStore.getHabits();
+        const afterCreateEntries = afterCreateHabits.flatMap((habit) => habitStore.getEntries(habit.id));
+        const afterCreateSummary = buildDashboardSummary(afterCreateHabits, afterCreateEntries, referenceDate);
+
+        expect(afterCreateSummary.weeklyPerformance.opportunities).toBeGreaterThan(
+            baselineSummary.weeklyPerformance.opportunities
+        );
+        expect(afterCreateSummary.completionRate).toBeLessThan(baselineSummary.completionRate);
+    });
+
+    it('increases dashboard streak when a DayTask is completed', () => {
+        const referenceDate = new Date('2026-02-16T12:00:00.000Z');
+        const task = habitStore.createDayTask(referenceDate, 'Complete me');
+
+        const beforeHabits = habitStore.getHabits();
+        const beforeEntries = beforeHabits.flatMap((habit) => habitStore.getEntries(habit.id));
+        const beforeSummary = buildDashboardSummary(beforeHabits, beforeEntries, referenceDate);
+
+        habitStore.updateDayTask(referenceDate, task.id, { completed: true });
+
+        const afterHabits = habitStore.getHabits();
+        const afterEntries = afterHabits.flatMap((habit) => habitStore.getEntries(habit.id));
+        const afterSummary = buildDashboardSummary(afterHabits, afterEntries, referenceDate);
+
+        expect(afterSummary.currentStreak).toBeGreaterThan(beforeSummary.currentStreak);
+    });
+
+    it('dispatches updates and reflects summary changes for DayTask create/complete/edit', () => {
+        const referenceDate = new Date('2026-02-16T12:00:00.000Z');
+        const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+
+        const beforeHabits = habitStore.getHabits();
+        const beforeEntries = beforeHabits.flatMap((habit) => habitStore.getEntries(habit.id));
+        const beforeSummary = buildDashboardSummary(beforeHabits, beforeEntries, referenceDate);
+
+        const task = habitStore.createDayTask(referenceDate, 'Initial Task');
+        const afterCreateHabits = habitStore.getHabits();
+        const afterCreateEntries = afterCreateHabits.flatMap((habit) => habitStore.getEntries(habit.id));
+        const afterCreateSummary = buildDashboardSummary(afterCreateHabits, afterCreateEntries, referenceDate);
+
+        expect(dispatchSpy).toHaveBeenCalled();
+        expect(afterCreateSummary.weeklyPerformance.opportunities).toBeGreaterThan(
+            beforeSummary.weeklyPerformance.opportunities
+        );
+
+        habitStore.updateDayTask(referenceDate, task.id, { completed: true });
+        const afterCompleteHabits = habitStore.getHabits();
+        const afterCompleteEntries = afterCompleteHabits.flatMap((habit) => habitStore.getEntries(habit.id));
+        const afterCompleteSummary = buildDashboardSummary(afterCompleteHabits, afterCompleteEntries, referenceDate);
+
+        expect(dispatchSpy).toHaveBeenCalledTimes(2);
+        expect(afterCompleteSummary.weeklyPerformance.completed).toBeGreaterThan(
+            afterCreateSummary.weeklyPerformance.completed
+        );
+        expect(afterCompleteSummary.currentStreak).toBeGreaterThan(afterCreateSummary.currentStreak);
+
+        habitStore.updateDayTask(referenceDate, task.id, { title: 'Edited Task' });
+        const editedTask = habitStore.getDayTasks(referenceDate).find((item) => item.id === task.id);
+
+        expect(dispatchSpy).toHaveBeenCalledTimes(3);
+        expect(editedTask?.title).toBe('Edited Task');
     });
 });

@@ -1,9 +1,10 @@
-import { render, screen, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import React from 'react';
 import Dashboard from './Dashboard';
 import { habitStore } from '@/lib/state/habitStore';
-import * as historyDomain from '@/lib/domain/history';
+import { buildDashboardSummary } from '@/lib/domain/dashboard';
+import { Habit, HabitEntry } from '@/lib/domain/types';
 
 // Mock habitStore
 vi.mock('@/lib/state/habitStore', () => ({
@@ -13,80 +14,134 @@ vi.mock('@/lib/state/habitStore', () => ({
     }
 }));
 
-// Mock domain logic
-vi.mock('@/lib/domain/history', () => ({
-    analyzeBehavioralPatterns: vi.fn(),
-}));
-
 describe('Dashboard', () => {
-    const mockHabit = {
-        id: 'test-habit',
-        title: 'Test Habit',
-        targetDays: [0, 1, 2, 3, 4, 5, 6],
-        createdAt: new Date(),
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const daysAgo = (days: number): Date => {
+        const date = new Date();
+        date.setHours(12, 0, 0, 0);
+        date.setDate(date.getDate() - days);
+        return date;
     };
+
+    const habits: Habit[] = [
+        {
+            id: 'h1',
+            title: 'Workout',
+            targetDays: [0, 1, 2, 3, 4, 5, 6],
+            createdAt: daysAgo(6),
+        },
+        {
+            id: 'h2',
+            title: 'Read',
+            targetDays: [0, 1, 2, 3, 4, 5, 6],
+            createdAt: daysAgo(6),
+        },
+    ];
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (habitStore.getHabits as any).mockReturnValue([mockHabit]);
-        (habitStore.getEntries as any).mockReturnValue([]);
+
+        vi.mocked(habitStore.getHabits).mockReturnValue(habits);
+        vi.mocked(habitStore.getEntries).mockImplementation((habitId: string): HabitEntry[] => {
+            if (habitId === 'h1') {
+                return Array.from({ length: 7 }, (_, index) => ({
+                    id: `h1-e${index}`,
+                    habitId: 'h1',
+                    completedAt: daysAgo(index),
+                }));
+            }
+
+            return [];
+        });
     });
 
-    it('renders behavioral metrics correctly', async () => {
-        // Mock domain output
-        (historyDomain.analyzeBehavioralPatterns as any).mockReturnValue({
-            habitId: 'test-habit',
-            consistencyScore: 0.85,
-            fragilityScore: 0.12,
-            dominantSkipDays: [1, 5], // Monday, Friday
-            averageRecoveryTime: 2.4,
-        });
+    afterEach(() => {
+        vi.clearAllMocks();
+    });
 
-        render(<Dashboard habitId="test-habit" />);
+    it('renders dashboard summary values from seeded habits and entries', async () => {
+        const seededEntries = habits.flatMap((habit) => habitStore.getEntries(habit.id));
+        const expected = buildDashboardSummary(habits, seededEntries);
+        const expectedSkipDay = expected.dominantSkipDay === null ? 'None' : dayNames[expected.dominantSkipDay];
+
+        render(<Dashboard />);
 
         await waitFor(() => {
-            expect(screen.getByText('85%')).toBeInTheDocument(); // Consistency
-            expect(screen.getByText('0.12')).toBeInTheDocument(); // Fragility
-            expect(screen.getByText('Mon, Fri')).toBeInTheDocument(); // Skip Days
-            expect(screen.getByText(/2.4/)).toBeInTheDocument(); // Recovery
+            const consistencyCard = screen.getByTestId('summary-consistency-card');
+            const skipCard = screen.getByTestId('summary-skip-card');
+
+            expect(consistencyCard).toHaveTextContent(`${Math.round(expected.consistency * 100)}%`);
+            expect(skipCard).toHaveTextContent(expectedSkipDay);
+
+            const fragilityCard = screen.getByTestId('summary-fragility-card');
+            const recoveryCard = screen.getByTestId('summary-recovery-card');
+            expect(fragilityCard).toHaveTextContent(expected.fragility.toString());
+            expect(recoveryCard).toHaveTextContent(expected.recoverySpeed.toString());
+            expect(recoveryCard).toHaveTextContent(/days/i);
         });
     });
 
-    it('updates when storage changes', async () => {
-        // Initial state
-        (historyDomain.analyzeBehavioralPatterns as any).mockReturnValue({
-            habitId: 'test-habit',
-            consistencyScore: 0.5,
-            fragilityScore: 0.5,
-            dominantSkipDays: [],
-            averageRecoveryTime: 0,
+    it('re-renders when entries change via state bridge update event', async () => {
+        render(<Dashboard />);
+        await waitFor(() => {
+            const consistencyCard = screen.getByTestId('summary-consistency-card');
+            expect(consistencyCard).toHaveTextContent('50%');
         });
 
-        const { rerender } = render(<Dashboard habitId="test-habit" />);
-        await waitFor(() => expect(screen.getByText('50%')).toBeInTheDocument());
+        vi.mocked(habitStore.getEntries).mockImplementation((habitId: string): HabitEntry[] => {
+            if (habitId === 'h1') {
+                return [
+                    { id: 'e1', habitId: 'h1', completedAt: daysAgo(0) },
+                    { id: 'e2', habitId: 'h1', completedAt: daysAgo(1) },
+                    { id: 'e3', habitId: 'h1', completedAt: daysAgo(2) },
+                    { id: 'e4', habitId: 'h1', completedAt: daysAgo(3) },
+                    { id: 'e5', habitId: 'h1', completedAt: daysAgo(4) },
+                    { id: 'e6', habitId: 'h1', completedAt: daysAgo(5) },
+                    { id: 'e7', habitId: 'h1', completedAt: daysAgo(6) },
+                ];
+            }
 
-        // Update state
-        (historyDomain.analyzeBehavioralPatterns as any).mockReturnValue({
-            habitId: 'test-habit',
-            consistencyScore: 0.9, // Changed
-            fragilityScore: 0.5,
-            dominantSkipDays: [],
-            averageRecoveryTime: 0,
+            if (habitId === 'h2') {
+                return [
+                    { id: 'e8', habitId: 'h2', completedAt: daysAgo(0) },
+                    { id: 'e9', habitId: 'h2', completedAt: daysAgo(1) },
+                    { id: 'e10', habitId: 'h2', completedAt: daysAgo(2) },
+                    { id: 'e11', habitId: 'h2', completedAt: daysAgo(3) },
+                    { id: 'e12', habitId: 'h2', completedAt: daysAgo(4) },
+                    { id: 'e13', habitId: 'h2', completedAt: daysAgo(5) },
+                    { id: 'e14', habitId: 'h2', completedAt: daysAgo(6) },
+                ];
+            }
+
+            return [];
         });
 
-        // Trigger event
         act(() => {
             window.dispatchEvent(new Event('habit-store-update'));
         });
 
         await waitFor(() => {
-            expect(screen.getByText('90%')).toBeInTheDocument();
+            const consistencyCard = screen.getByTestId('summary-consistency-card');
+            const skipCard = screen.getByTestId('summary-skip-card');
+            const fragilityCard = screen.getByTestId('summary-fragility-card');
+            expect(consistencyCard).toHaveTextContent('100%');
+            expect(skipCard).toHaveTextContent('None');
+            expect(fragilityCard).toHaveTextContent('0');
         });
     });
 
-    it('handles missing habit gracefully', () => {
-        (habitStore.getHabits as any).mockReturnValue([]); // No habits
-        const { container } = render(<Dashboard habitId="missing-habit" />);
-        expect(container).toBeEmptyDOMElement();
+    it('aggregates multiple habits when no habitId is provided', async () => {
+        const seededEntries = habits.flatMap((habit) => habitStore.getEntries(habit.id));
+        const expected = buildDashboardSummary(habits, seededEntries);
+
+        render(<Dashboard />);
+
+        await waitFor(() => {
+            const consistencyCard = screen.getByTestId('summary-consistency-card');
+            const fragilityCard = screen.getByTestId('summary-fragility-card');
+
+            expect(consistencyCard).toHaveTextContent(`${Math.round(expected.consistency * 100)}%`);
+            expect(fragilityCard).toHaveTextContent(expected.fragility.toString());
+        });
     });
 });

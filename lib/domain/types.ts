@@ -106,3 +106,39 @@ export interface HabitHistorySummary {
   /** ID of the habit this summary refers to */
   habitId: string;
 }
+
+/**
+ * Aggregate weekly performance metrics for dashboard reporting.
+ */
+export interface WeeklyPerformance {
+  /** Completed scheduled opportunities in the 7-day window */
+  completed: number;
+  /** Total scheduled opportunities in the 7-day window */
+  opportunities: number;
+  /** Weekly completion percentage (0-100) */
+  completionRate: number;
+}
+
+/**
+ * Data contract used by the dashboard UI layer.
+ */
+export interface DashboardSummary {
+  /** Cross-habit consistency ratio (0-1) */
+  consistency: number;
+  /** Cross-habit fragility ratio (0-1) */
+  fragility: number;
+  /** Weekday index (0-6) with the most skips; null when no skips exist */
+  dominantSkipDay: number | null;
+  /** Average recovery steps needed to return to CLEAN state */
+  recoverySpeed: number;
+  /** Sum of current streak display counts across all habits */
+  currentStreak: number;
+  /** Best longest streak observed among all habits */
+  longestStreak: number;
+  /** Number of tracked habits included in the summary */
+  totalHabits: number;
+  /** Overall completion percentage (0-100) */
+  completionRate: number;
+  /** Last 7-day performance snapshot */
+  weeklyPerformance: WeeklyPerformance;
+}
