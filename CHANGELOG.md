@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/madhawapathum/Habbit_Tracker/compare/v1.4.0...v1.5.0) (2026-02-15)
+
+
+### Features
+
+* unify day task data flow and dynamic habits calendar ([8f88a48](https://github.com/madhawapathum/Habbit_Tracker/commit/8f88a48f05e771e716105f4efd3bf142c55b29bb))
+
 ## [1.4.0](https://github.com/madhawapathum/Habbit_Tracker/compare/v1.3.0...v1.4.0) (2026-02-11)
 
 
