@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/madhawapathum/Habbit_Tracker/compare/v1.5.0...v1.6.0) (2026-02-16)
+
+
+### Features
+
+* add Prisma-backed habit APIs with NextAuth user scoping ([4bde77d](https://github.com/madhawapathum/Habbit_Tracker/commit/4bde77d7a13f18147a5813e6eb472bebe3dc192c))
+
 ## [1.5.0](https://github.com/madhawapathum/Habbit_Tracker/compare/v1.4.0...v1.5.0) (2026-02-15)
 
 
