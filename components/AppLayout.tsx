@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut, useSession } from 'next-auth/react';
 
 interface AppLayoutProps {
     children: React.ReactNode;
@@ -10,6 +11,7 @@ interface AppLayoutProps {
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     const pathname = usePathname();
+    const { data: session, status } = useSession();
     const navItems = [
         { label: 'Dashboard', href: '/dashboard' },
         { label: 'Habits', href: '/habits' },
@@ -22,6 +24,29 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <header className="app-header">
                 <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-6 px-4 py-6 md:px-8">
                     <h1 className="text-2xl font-semibold tracking-tight">Habit Tracker</h1>
+                    <div className="flex items-center gap-3 md:gap-4">
+                        <div className="text-right">
+                            <p className="text-xs text-slate-400">Session</p>
+                            <p className="text-sm font-medium text-slate-200">
+                                {status === 'authenticated' ? session.user?.name ?? 'Signed in' : 'Guest'}
+                            </p>
+                        </div>
+                        {status === 'authenticated' ? (
+                            <button
+                                onClick={() => signOut({ callbackUrl: '/login' })}
+                                className="rounded-lg border border-white/20 px-3 py-2 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 md:text-base"
+                            >
+                                Logout
+                            </button>
+                        ) : (
+                            <Link
+                                href="/login"
+                                className="rounded-lg border border-white/20 px-3 py-2 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 md:text-base"
+                            >
+                                Login
+                            </Link>
+                        )}
+                    </div>
                     <nav className="flex items-center gap-2 md:gap-4">
                         {navItems.map((item) => {
                             const active = pathname === item.href;

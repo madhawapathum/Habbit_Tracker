@@ -18,6 +18,9 @@ describe('Settings', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         (habitStore.getSettings as any).mockReturnValue({});
+        (habitStore.deleteAllData as any).mockResolvedValue(undefined);
+        (habitStore.exportData as any).mockResolvedValue('{"habits":[],"entries":[],"journal":[],"settings":{}}');
+        (habitStore.importData as any).mockResolvedValue(true);
     });
 
     it('renders all settings options', () => {
@@ -38,9 +41,7 @@ describe('Settings', () => {
         expect(habitStore.deleteAllData).toHaveBeenCalled();
     });
 
-    it('exports data as JSON', () => {
-        (habitStore.exportData as any).mockReturnValue('{"habits":[],"entries":[],"journal":[],"settings":{}}');
-
+    it('exports data as JSON', async () => {
         // Save original createElement and mock only the anchor
         const origCreateElement = document.createElement.bind(document);
         const clickMock = vi.fn();
@@ -59,8 +60,10 @@ describe('Settings', () => {
         render(<Settings />);
         fireEvent.click(screen.getByText('Export Data'));
 
-        expect(habitStore.exportData).toHaveBeenCalled();
-        expect(clickMock).toHaveBeenCalled();
+        await waitFor(() => {
+            expect(habitStore.exportData).toHaveBeenCalled();
+            expect(clickMock).toHaveBeenCalled();
+        });
 
         // Restore to prevent pollution
         createElementSpy.mockRestore();
@@ -78,7 +81,6 @@ describe('Settings', () => {
     });
 
     it('imports data from file', async () => {
-        (habitStore.importData as any).mockReturnValue(true);
         render(<Settings />);
 
         const jsonData = '{"habits":[],"entries":[]}';

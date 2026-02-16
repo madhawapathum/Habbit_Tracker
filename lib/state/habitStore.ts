@@ -1,7 +1,5 @@
 import { Habit, HabitEntry } from '../domain/types';
 
-const HABITS_KEY = 'habits';
-const ENTRIES_KEY = 'entries';
 const JOURNAL_KEY = 'journal';
 const SETTINGS_KEY = 'settings';
 const DAY_TASK_MARKER = 'day-task:';
@@ -26,6 +24,20 @@ export interface DayTask {
 export interface DayTaskView {
     selectedDate: string; // ISO date string (YYYY-MM-DD)
     tasksForSelectedDay: DayTask[];
+}
+
+interface HabitApiRecord {
+    id: string;
+    name: string;
+    schedule: unknown;
+    createdAt: string;
+}
+
+interface EntryApiRecord {
+    id: string;
+    habitId: string;
+    date: string;
+    completed: boolean;
 }
 
 function safeParse<T>(key: string, fallback: T): T {
@@ -80,67 +92,124 @@ function notifyUpdate() {
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('habit-store-update'));
 }
 
+async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+    const response = await fetch(url, {
+        ...init,
+        headers: {
+            'Content-Type': 'application/json',
+            ...(init?.headers ?? {}),
+        },
+    });
+
+    if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || `Request failed: ${response.status}`);
+    }
+
+    if (response.status === 204) {
+        return undefined as T;
+    }
+
+    return response.json() as Promise<T>;
+}
+
+function parseDateMaybe(value: unknown): Date | undefined {
+    if (typeof value !== 'string') return undefined;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function mapHabitFromApi(record: HabitApiRecord): Habit {
+    const schedule = (record.schedule && typeof record.schedule === 'object')
+        ? (record.schedule as Record<string, unknown>)
+        : {};
+
+    const createdAt = parseDateMaybe(schedule.createdAt) ?? new Date(record.createdAt);
+    const targetDaysRaw = schedule.targetDays;
+    const targetDays = Array.isArray(targetDaysRaw)
+        ? targetDaysRaw.filter((value): value is number => typeof value === 'number')
+        : [];
+
+    return {
+        id: record.id,
+        title: record.name,
+        description: typeof schedule.description === 'string' ? schedule.description : undefined,
+        targetDays,
+        createdAt,
+        startDate: parseDateMaybe(schedule.startDate),
+        endDate: parseDateMaybe(schedule.endDate),
+    };
+}
+
+function mapHabitToApi(habit: Habit): { id: string; name: string; schedule: Record<string, unknown> } {
+    return {
+        id: habit.id,
+        name: habit.title,
+        schedule: {
+            description: habit.description,
+            targetDays: habit.targetDays,
+            createdAt: habit.createdAt.toISOString(),
+            startDate: habit.startDate?.toISOString(),
+            endDate: habit.endDate?.toISOString(),
+        },
+    };
+}
+
+function mapEntryFromApi(record: EntryApiRecord): HabitEntry {
+    return {
+        id: record.id,
+        habitId: record.habitId,
+        completedAt: new Date(record.date),
+    };
+}
+
 export const habitStore = {
-    // ─── Habits ───
-    getHabits(): Habit[] {
-        const habits = safeParse<Habit[]>(HABITS_KEY, []);
-        return habits.map(h => ({
-            ...h,
-            createdAt: new Date(h.createdAt),
-            startDate: h.startDate ? new Date(h.startDate) : undefined,
-            endDate: h.endDate ? new Date(h.endDate) : undefined,
-        }));
+    // Habits
+    async getHabits(): Promise<Habit[]> {
+        const habits = await requestJson<HabitApiRecord[]>('/api/habits');
+        return habits.map(mapHabitFromApi);
     },
 
-    getEntries(habitId: string): HabitEntry[] {
-        const allEntries = safeParse<HabitEntry[]>(ENTRIES_KEY, []);
+    async getEntries(habitId: string): Promise<HabitEntry[]> {
+        const allEntries = await requestJson<EntryApiRecord[]>(`/api/entries?habitId=${encodeURIComponent(habitId)}`);
         return allEntries
-            .filter(e => e.habitId === habitId)
-            .map(e => ({
-                ...e,
-                completedAt: new Date(e.completedAt)
-            }));
+            .filter((entry) => entry.completed)
+            .map(mapEntryFromApi);
     },
 
-    addEntry(habitId: string, completedAt: Date): void {
-        const allEntries = safeParse<HabitEntry[]>(ENTRIES_KEY, []);
-        const newEntry: HabitEntry = {
-            id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36),
-            habitId,
-            completedAt: completedAt,
-        };
-        const updated = [...allEntries, newEntry];
-        localStorage.setItem(ENTRIES_KEY, JSON.stringify(updated));
-        notifyUpdate();
-    },
-
-    removeEntry(habitId: string, date: Date): void {
-        const allEntries = safeParse<HabitEntry[]>(ENTRIES_KEY, []);
-        const targetTime = startOfDay(date);
-
-        const updated = allEntries.filter(e => {
-            if (e.habitId !== habitId) return true;
-            const entryTime = startOfDay(new Date(e.completedAt));
-            return entryTime !== targetTime;
+    async addEntry(habitId: string, completedAt: Date): Promise<void> {
+        await requestJson('/api/entries', {
+            method: 'POST',
+            body: JSON.stringify({
+                habitId,
+                date: completedAt.toISOString(),
+                completed: true,
+            }),
         });
-
-        localStorage.setItem(ENTRIES_KEY, JSON.stringify(updated));
         notifyUpdate();
     },
 
-    updateHabit(habit: Habit): void {
-        const habits = safeParse<Habit[]>(HABITS_KEY, []);
-        const index = habits.findIndex(h => h.id === habit.id);
-        if (index >= 0) {
-            habits[index] = habit;
-        } else {
-            habits.push(habit);
-        }
-        localStorage.setItem(HABITS_KEY, JSON.stringify(habits));
+    async removeEntry(habitId: string, date: Date): Promise<void> {
+        await requestJson('/api/entries', {
+            method: 'DELETE',
+            body: JSON.stringify({
+                habitId,
+                date: date.toISOString(),
+            }),
+        });
         notifyUpdate();
     },
 
-    // ─── Journal ───
+    async updateHabit(habit: Habit): Promise<void> {
+        const payload = mapHabitToApi(habit);
+        await requestJson('/api/habits', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+        notifyUpdate();
+    },
+
+    // Journal
     saveJournalEntry(date: Date, content: string, mood?: string): void {
         const entries = safeParse<JournalEntry[]>(JOURNAL_KEY, []);
         const key = toDateKey(date);
@@ -165,22 +234,24 @@ export const habitStore = {
         return safeParse<JournalEntry[]>(JOURNAL_KEY, []);
     },
 
-    getDayTasks(date: Date): DayTask[] {
+    async getDayTasks(date: Date): Promise<DayTask[]> {
         const key = toDateKey(date);
-        const habits = this.getHabits().filter((habit) => parseDayTaskDate(habit.description) === key);
+        const habits = (await this.getHabits()).filter((habit) => parseDayTaskDate(habit.description) === key);
 
-        return habits.map((habit) => {
-            const completed = this.getEntries(habit.id).some((entry) => startOfDay(entry.completedAt) === startOfDay(date));
+        const tasks = await Promise.all(habits.map(async (habit) => {
+            const completed = (await this.getEntries(habit.id)).some((entry) => startOfDay(entry.completedAt) === startOfDay(date));
             return {
                 id: habit.id,
                 title: habit.title,
                 completed,
-                date: key
+                date: key,
             };
-        });
+        }));
+
+        return tasks;
     },
 
-    createDayTask(date: Date, title: string): DayTask {
+    async createDayTask(date: Date, title: string): Promise<DayTask> {
         const normalizedDate = new Date(date);
         normalizedDate.setHours(12, 0, 0, 0);
         const dateKey = toDateKey(normalizedDate);
@@ -193,57 +264,57 @@ export const habitStore = {
             targetDays: [normalizedDate.getDay()],
             createdAt: normalizedDate,
             startDate: normalizedDate,
-            endDate: normalizedDate
+            endDate: normalizedDate,
         };
 
-        this.updateHabit(mappedHabit);
+        await this.updateHabit(mappedHabit);
 
         return {
             id,
             title: mappedHabit.title,
             completed: false,
-            date: dateKey
+            date: dateKey,
         };
     },
 
-    updateDayTask(
+    async updateDayTask(
         date: Date,
         taskId: string,
         updates: Pick<Partial<DayTask>, 'title' | 'completed'>
-    ): DayTask | null {
+    ): Promise<DayTask | null> {
         const key = toDateKey(date);
-        const habits = this.getHabits();
+        const habits = await this.getHabits();
         const taskHabit = habits.find((habit) => habit.id === taskId && parseDayTaskDate(habit.description) === key);
         if (!taskHabit) {
             return null;
         }
 
         if (updates.title !== undefined) {
-            this.updateHabit({
+            await this.updateHabit({
                 ...taskHabit,
-                title: updates.title.trim()
+                title: updates.title.trim(),
             });
         }
 
-        const isCompleted = this.getEntries(taskId).some((entry) => startOfDay(entry.completedAt) === startOfDay(date));
+        const isCompleted = (await this.getEntries(taskId)).some((entry) => startOfDay(entry.completedAt) === startOfDay(date));
         if (updates.completed === true && !isCompleted) {
-            this.addEntry(taskId, date);
+            await this.addEntry(taskId, date);
         }
         if (updates.completed === false && isCompleted) {
-            this.removeEntry(taskId, date);
+            await this.removeEntry(taskId, date);
         }
 
-        const refreshedHabit = this.getHabits().find((habit) => habit.id === taskId);
-        const completed = this.getEntries(taskId).some((entry) => startOfDay(entry.completedAt) === startOfDay(date));
+        const refreshedHabit = (await this.getHabits()).find((habit) => habit.id === taskId);
+        const completed = (await this.getEntries(taskId)).some((entry) => startOfDay(entry.completedAt) === startOfDay(date));
         return {
             id: taskId,
             title: refreshedHabit?.title ?? taskHabit.title,
             completed,
-            date: key
+            date: key,
         };
     },
 
-    // ─── Settings ───
+    // Settings
     getSettings(): AppSettings {
         return safeParse<AppSettings>(SETTINGS_KEY, {});
     },
@@ -253,18 +324,21 @@ export const habitStore = {
         notifyUpdate();
     },
 
-    // ─── Data Management ───
-    deleteAllData(): void {
-        localStorage.removeItem(HABITS_KEY);
-        localStorage.removeItem(ENTRIES_KEY);
+    // Data Management
+    async deleteAllData(): Promise<void> {
+        await requestJson('/api/habits', {
+            method: 'DELETE',
+        });
+
         localStorage.removeItem(JOURNAL_KEY);
         localStorage.removeItem(SETTINGS_KEY);
         notifyUpdate();
     },
 
-    exportData(): string {
-        const habits = safeParse<Habit[]>(HABITS_KEY, []);
-        const entries = safeParse<HabitEntry[]>(ENTRIES_KEY, []);
+    async exportData(): Promise<string> {
+        const habits = await this.getHabits();
+        const entries = (await Promise.all(habits.map((habit) => this.getEntries(habit.id)))).flat();
+
         const dayTasks: DayTask[] = habits
             .filter((habit) => parseDayTaskDate(habit.description) !== null)
             .map((habit) => {
@@ -282,7 +356,7 @@ export const habitStore = {
                     id: habit.id,
                     title: habit.title,
                     completed,
-                    date
+                    date,
                 };
             });
 
@@ -295,11 +369,19 @@ export const habitStore = {
         });
     },
 
-    importData(json: string): boolean {
+    async importData(json: string): Promise<boolean> {
         try {
             const data = JSON.parse(json);
-            const habits: Habit[] = Array.isArray(data.habits) ? data.habits : [];
-            const entries: HabitEntry[] = Array.isArray(data.entries) ? data.entries : [];
+            const habits: Habit[] = Array.isArray(data.habits) ? data.habits.map((habit: Habit) => ({
+                ...habit,
+                createdAt: new Date(habit.createdAt),
+                startDate: habit.startDate ? new Date(habit.startDate) : undefined,
+                endDate: habit.endDate ? new Date(habit.endDate) : undefined,
+            })) : [];
+            const entries: HabitEntry[] = Array.isArray(data.entries) ? data.entries.map((entry: HabitEntry) => ({
+                ...entry,
+                completedAt: new Date(entry.completedAt),
+            })) : [];
 
             if (Array.isArray(data.dayTasks)) {
                 data.dayTasks.forEach((task: DayTask) => {
@@ -314,7 +396,7 @@ export const habitStore = {
                             targetDays: [dateObj.getDay()],
                             createdAt: dateObj,
                             startDate: dateObj,
-                            endDate: dateObj
+                            endDate: dateObj,
                         });
                     }
 
@@ -328,15 +410,21 @@ export const habitStore = {
                             entries.push({
                                 id: `${task.id}-entry`,
                                 habitId: task.id,
-                                completedAt: dateObj
+                                completedAt: dateObj,
                             });
                         }
                     }
                 });
             }
 
-            localStorage.setItem(HABITS_KEY, JSON.stringify(habits));
-            localStorage.setItem(ENTRIES_KEY, JSON.stringify(entries));
+            await this.deleteAllData();
+            for (const habit of habits) {
+                await this.updateHabit(habit);
+            }
+            for (const entry of entries) {
+                await this.addEntry(entry.habitId, new Date(entry.completedAt));
+            }
+
             if (data.journal) localStorage.setItem(JOURNAL_KEY, JSON.stringify(data.journal));
             if (data.settings) localStorage.setItem(SETTINGS_KEY, JSON.stringify(data.settings));
             notifyUpdate();
@@ -348,21 +436,20 @@ export const habitStore = {
     },
 
     // Temporary development utility for realistic dashboard validation.
-    seedRealisticTestData(referenceDate: Date = new Date(), force = false): boolean {
+    async seedRealisticTestData(referenceDate: Date = new Date(), force = false): Promise<boolean> {
         if (process.env.NODE_ENV === 'production') {
             return false;
         }
 
         const hasExistingData =
-            this.getHabits().length > 0 ||
-            safeParse<HabitEntry[]>(ENTRIES_KEY, []).length > 0 ||
+            (await this.getHabits()).length > 0 ||
             this.getAllJournalEntries().length > 0 ||
             Object.keys(this.getSettings()).length > 0;
         if (hasExistingData && !force) {
             return false;
         }
 
-        this.deleteAllData();
+        await this.deleteAllData();
 
         const today = new Date(referenceDate);
         today.setHours(12, 0, 0, 0);
@@ -373,36 +460,38 @@ export const habitStore = {
                 id: 'seed-weekdays',
                 title: 'Morning Walk',
                 targetDays: [1, 2, 3, 4, 5],
-                createdAt
+                createdAt,
             },
             {
                 id: 'seed-mwf',
                 title: 'Strength Training',
                 targetDays: [1, 3, 5],
-                createdAt
+                createdAt,
             },
             {
                 id: 'seed-weekend',
                 title: 'Long Read',
                 targetDays: [0, 6],
-                createdAt
-            }
+                createdAt,
+            },
         ];
 
-        habits.forEach((habit) => this.updateHabit(habit));
+        for (const habit of habits) {
+            await this.updateHabit(habit);
+        }
 
         const completionsByHabit: Record<string, number[]> = {
             'seed-weekdays': [13, 12, 11, 9, 5, 4, 2],
             'seed-mwf': [13, 11, 6, 2],
-            'seed-weekend': [7, 1]
+            'seed-weekend': [7, 1],
         };
 
-        habits.forEach((habit) => {
+        for (const habit of habits) {
             const completionOffsets = completionsByHabit[habit.id] ?? [];
-            completionOffsets.forEach((offset) => {
-                this.addEntry(habit.id, daysAgo(today, offset));
-            });
-        });
+            for (const offset of completionOffsets) {
+                await this.addEntry(habit.id, daysAgo(today, offset));
+            }
+        }
 
         return true;
     },

@@ -25,17 +25,19 @@ const HabitCalendar: React.FC<HabitCalendarProps> = ({
     const [isMounted, setIsMounted] = useState(false);
 
     // Load data
-    const loadData = useCallback(() => {
-        const fetchedEntries = habitStore.getEntries(habitId);
+    const loadData = useCallback(async () => {
+        const fetchedEntries = await habitStore.getEntries(habitId);
         setEntries(fetchedEntries);
     }, [habitId]);
 
     useEffect(() => {
         setIsMounted(true);
-        loadData();
+        void loadData();
 
         // Listen for storage events to sync across tabs/components
-        const handleStorageChange = () => loadData();
+        const handleStorageChange = () => {
+            void loadData();
+        };
         window.addEventListener('storage', handleStorageChange);
         return () => window.removeEventListener('storage', handleStorageChange);
     }, [loadData]);
@@ -59,12 +61,12 @@ const HabitCalendar: React.FC<HabitCalendarProps> = ({
         return isCompleted;
     };
 
-    const toggleDate = (date: Date) => {
+    const toggleDate = async (date: Date) => {
         const isCompleted = getDayStatus(date);
         if (isCompleted) {
-            habitStore.removeEntry(habitId, date);
+            await habitStore.removeEntry(habitId, date);
         } else {
-            habitStore.addEntry(habitId, date);
+            await habitStore.addEntry(habitId, date);
             // Trigger celebration if toggling today or recently
             const today = new Date();
             if (date.toDateString() === today.toDateString()) {
@@ -72,7 +74,7 @@ const HabitCalendar: React.FC<HabitCalendarProps> = ({
                 setTimeout(() => setShowCelebration(false), 2000);
             }
         }
-        loadData(); // Reload immediately
+        await loadData(); // Reload immediately
     };
 
     const pages = useMemo(() => {

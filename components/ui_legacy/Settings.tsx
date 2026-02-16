@@ -24,8 +24,8 @@ const Settings: React.FC = () => {
         return () => window.removeEventListener('habit-store-update', handleUpdate);
     }, [loadSettings]);
 
-    const handleClearAll = () => {
-        habitStore.deleteAllData();
+    const handleClearAll = async () => {
+        await habitStore.deleteAllData();
         setShowConfirm(false);
     };
 
@@ -36,8 +36,8 @@ const Settings: React.FC = () => {
         setSettings(updated);
     };
 
-    const handleExport = () => {
-        const data = habitStore.exportData();
+    const handleExport = async () => {
+        const data = await habitStore.exportData();
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -52,9 +52,9 @@ const Settings: React.FC = () => {
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
             const json = event.target?.result as string;
-            const success = habitStore.importData(json);
+            const success = await habitStore.importData(json);
             setImportStatus(success ? 'Import successful!' : 'Import failed. Invalid file.');
             setTimeout(() => setImportStatus(null), 3000);
         };

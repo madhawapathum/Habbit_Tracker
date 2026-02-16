@@ -14,20 +14,23 @@ const Dashboard: React.FC<DashboardProps> = ({ habitId }) => {
     const [summary, setSummary] = useState<DashboardSummary | null>(null);
     const [isMounted, setIsMounted] = useState(false);
 
-    const loadData = useCallback(() => {
-        const habits = habitStore.getHabits();
+    const loadData = useCallback(async () => {
+        const habits = await habitStore.getHabits();
         const scopedHabits = habitId
             ? habits.filter((habit) => habit.id === habitId)
             : habits;
-        const entries = scopedHabits.flatMap((habit) => habitStore.getEntries(habit.id));
+        const entriesByHabit = await Promise.all(scopedHabits.map((habit) => habitStore.getEntries(habit.id)));
+        const entries = entriesByHabit.flat();
         setSummary(buildDashboardSummary(scopedHabits, entries));
     }, [habitId]);
 
     useEffect(() => {
         setIsMounted(true);
-        loadData();
+        void loadData();
 
-        const handleStorageChange = () => loadData();
+        const handleStorageChange = () => {
+            void loadData();
+        };
         window.addEventListener('storage', handleStorageChange);
         // Custom event dispatch for local updates if needed, though 'storage' only works across tabs usually.
         // We might need a custom event or a subscription if we want instant updates in same tab without refresh.

@@ -13,22 +13,22 @@ const Habits: React.FC = () => {
     const [newHabitTitle, setNewHabitTitle] = useState('');
     const [isMounted, setIsMounted] = useState(false);
 
-    const loadData = useCallback(() => {
-        const loadedHabits = habitStore.getHabits();
+    const loadData = useCallback(async () => {
+        const loadedHabits = await habitStore.getHabits();
         setHabits(loadedHabits);
-
-        const loadedEntries: Record<string, HabitEntry[]> = {};
-        loadedHabits.forEach(h => {
-            loadedEntries[h.id] = habitStore.getEntries(h.id);
-        });
-        setEntries(loadedEntries);
+        const loadedEntriesPairs = await Promise.all(
+            loadedHabits.map(async (habit) => [habit.id, await habitStore.getEntries(habit.id)] as const)
+        );
+        setEntries(Object.fromEntries(loadedEntriesPairs));
     }, []);
 
     useEffect(() => {
         setIsMounted(true);
-        loadData();
+        void loadData();
 
-        const handleStorageChange = () => loadData();
+        const handleStorageChange = () => {
+            void loadData();
+        };
         window.addEventListener('storage', handleStorageChange);
         window.addEventListener('habit-store-update', handleStorageChange);
         return () => {
@@ -37,7 +37,7 @@ const Habits: React.FC = () => {
         };
     }, [loadData]);
 
-    const handleAddHabit = (e: React.FormEvent) => {
+    const handleAddHabit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newHabitTitle.trim()) return;
 
@@ -48,12 +48,12 @@ const Habits: React.FC = () => {
             createdAt: new Date(),
         };
 
-        habitStore.updateHabit(newHabit);
+        await habitStore.updateHabit(newHabit);
         setNewHabitTitle('');
         // loadData triggered by event listener
     };
 
-    const toggleToday = (habitId: string) => {
+    const toggleToday = async (habitId: string) => {
         const today = new Date();
         const habitEntries = entries[habitId] || [];
         const isCompleted = habitEntries.some(e => {
@@ -62,9 +62,9 @@ const Habits: React.FC = () => {
         });
 
         if (isCompleted) {
-            habitStore.removeEntry(habitId, today);
+            await habitStore.removeEntry(habitId, today);
         } else {
-            habitStore.addEntry(habitId, today);
+            await habitStore.addEntry(habitId, today);
         }
         // loadData triggered by event listener
     };

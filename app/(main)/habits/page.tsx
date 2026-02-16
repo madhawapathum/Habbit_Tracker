@@ -46,14 +46,16 @@ export default function HabitsPage() {
   const selectedDateKey = toDateKey(selectedDate);
   const todayDateKey = toDateKey(today);
 
-  const loadSnapshot = useCallback(() => {
-    const exported = JSON.parse(habitStore.exportData()) as StateBridgeSnapshot;
+  const loadSnapshot = useCallback(async () => {
+    const exported = JSON.parse(await habitStore.exportData()) as StateBridgeSnapshot;
     setSnapshot({ dayTasks: exported.dayTasks ?? [] });
   }, []);
 
   useEffect(() => {
-    loadSnapshot();
-    const handleStoreUpdate = () => loadSnapshot();
+    void loadSnapshot();
+    const handleStoreUpdate = () => {
+      void loadSnapshot();
+    };
     window.addEventListener("habit-store-update", handleStoreUpdate);
     window.addEventListener("storage", handleStoreUpdate);
     return () => {
@@ -93,14 +95,14 @@ export default function HabitsPage() {
   const selectedDayLabel = `Day ${selectedDayNumber}`;
   const selectedDayProgress = `${completedCount}/${tasksForSelectedDay.length}`;
 
-  const handleAddTask = (title: string) => {
-    habitStore.createDayTask(selectedDate, title);
-    loadSnapshot();
+  const handleAddTask = async (title: string) => {
+    await habitStore.createDayTask(selectedDate, title);
+    await loadSnapshot();
   };
 
-  const handleUpdateTask = (taskId: string, updates: { title?: string; completed?: boolean }) => {
-    habitStore.updateDayTask(selectedDate, taskId, updates);
-    loadSnapshot();
+  const handleUpdateTask = async (taskId: string, updates: { title?: string; completed?: boolean }) => {
+    await habitStore.updateDayTask(selectedDate, taskId, updates);
+    await loadSnapshot();
   };
 
   const handleSelectDate = (dateKey: string) => {
